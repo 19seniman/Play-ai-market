@@ -1,0 +1,15 @@
+What is PlayAI and what's its core mission in the DeFi space?
+Can you break down the tokenomics of the Aura system?
+Explain the utility of the native token within the ecosystem.
+What are the primary methods for yield farming or staking on PlayAI?
+Tell me about the daily quests and their on-chain rewards.
+What are the benefits of daily on-chain interactions?
+How does the decentralized governance model for voting work?
+What is the 'Airdrop Insiders' alpha group?
+When was the mainnet launch or token generation event (TGE)?
+Is the team behind PlayAI doxxed or anonymous?
+What's on the project's roadmap for the next quarter?
+How are user assets secured? Have the smart contracts been audited?
+What are the key differences between the ETH and SOL wallet integrations?
+Explain the liquidity mining program in more detail.
+What's the latest alpha or update from the project?
