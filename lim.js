@@ -441,25 +441,14 @@ class PlayAIBot {
             const success = await this.runOnce();
             if (!success) {
                 logger.warn(`[Wallet ${this.index}] Bot run failed, retrying after a short delay...`);
-                await this.delay(60000); 
+                await this.delay(60000); // Tunggu 1 menit sebelum mencoba lagi
                 continue;
             }
 
-            logger.step(`[Wallet ${this.index}] Checking daily reset time...`);
-            const quota = await this.getMiningQuota();
-            let timeUntilReset = 24 * 60 * 60 * 1000; 
-
-            if (quota && quota.resetAt) {
-                const resetTime = new Date(quota.resetAt);
-                const now = new Date();
-                const waitTime = resetTime.getTime() - now.getTime();
-                if (waitTime > 0) {
-                    timeUntilReset = waitTime;
-                }
-            }
-            
-            logger.info(`[Wallet ${this.index}] Next run in: ${this.formatTime(timeUntilReset)}`);
-            await this.delay(timeUntilReset + 5000); 
+            // Tunggu selama 24 jam sebelum proses berikutnya
+            const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
+            logger.info(`[Wallet ${this.index}] Cycle complete. Next run in: ${this.formatTime(twentyFourHoursInMs)}`);
+            await this.delay(twentyFourHoursInMs);
         }
     }
 }
