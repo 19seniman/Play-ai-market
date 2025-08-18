@@ -4,6 +4,7 @@ const { ethers } = require('ethers');
 const fs = require('fs');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 
+// Menambahkan warna baru yang dibutuhkan oleh logger
 const colors = {
     reset: "\x1b[0m",
     cyan: "\x1b[36m",
@@ -17,13 +18,14 @@ const colors = {
     gray: "\x1b[90m",
 };
 
+// Logger baru yang Anda berikan
 const logger = {
     info: (msg) => console.log(`${colors.cyan}[i] ${msg}${colors.reset}`),
     warn: (msg) => console.log(`${colors.yellow}[!] ${msg}${colors.reset}`),
     error: (msg) => console.log(`${colors.red}[x] ${msg}${colors.reset}`),
     success: (msg) => console.log(`${colors.green}[+] ${msg}${colors.reset}`),
     loading: (msg) => console.log(`${colors.magenta}[*] ${msg}${colors.reset}`),
-    step: (msg) => console.log(`\n${colors.blue}[>] ${colors.bold}${msg}${colors.reset}`),
+    step: (msg) => console.log(`${colors.blue}[>] ${colors.bold}${msg}${colors.reset}`),
     critical: (msg) => console.log(`${colors.red}${colors.bold}[FATAL] ${msg}${colors.reset}`),
     summary: (msg) => console.log(`${colors.green}${colors.bold}[SUMMARY] ${msg}${colors.reset}`),
     banner: () => {
@@ -39,10 +41,11 @@ const logger = {
         const line = '─'.repeat(40);
         console.log(`\n${colors.gray}${line}${colors.reset}`);
         if (msg) console.log(`${colors.white}${colors.bold} ${msg} ${colors.reset}`);
-        console.log(`${colors.gray}${line}${colors.reset}\n`);
+        console.log(`${colors.gray}${line}${colors.reset}`);
     },
     countdown: (msg) => process.stdout.write(`\r${colors.blue}[⏰] ${msg}${colors.reset}`),
 };
+
 
 const getUserAgent = () => {
     const userAgents = [
@@ -77,8 +80,8 @@ class PlayAIBot {
         this.address = this.wallet.address;
         this.jwt = null;
         this.userAgent = getUserAgent();
-        this.baseURL = 'https://hub-playai.up.railway.app';
-        this.chatURL = 'https://play-hub.up.railway.app';
+        this.baseURL = 'https://hub.playai.network';
+        this.chatURL = 'https://hub.playai.network';
 
         const axiosConfig = {
             timeout: 60000,
@@ -158,7 +161,7 @@ class PlayAIBot {
         }
     }
 
-   async checkIn() {
+    async checkIn() {
         try {
             logger.info(`[Wallet ${this.index}] Performing daily check-in...`);
             const response = await this.axios.post(`${this.baseURL}/user/streak`);
@@ -200,8 +203,8 @@ class PlayAIBot {
         }
     }
 
-   async completeAllMissions() {
-        logger.step(`[Wallet ${this.index}] Starting mission completion...`);
+    async completeAllMissions() {
+        logger.section(`[Wallet ${this.index}] Starting Mission Completion`);
         const missions = await this.getMissions();
         const incompleteMissions = missions.filter(mission => !mission.completed);
 
@@ -286,7 +289,7 @@ class PlayAIBot {
     }
 
     async performAllVotes() {
-        logger.step(`[Wallet ${this.index}] Starting voting process...`);
+        logger.section(`[Wallet ${this.index}] Starting Voting Process`);
         const voteQuota = await this.getVoteQuota();
         if (!voteQuota) return;
 
@@ -363,7 +366,7 @@ class PlayAIBot {
     }
 
     async performAllChats() {
-        logger.step(`[Wallet ${this.index}] Starting chat interactions...`);
+        logger.section(`[Wallet ${this.index}] Starting Chat Interactions`);
         const chatCount = await this.getChatCount();
         if (!chatCount) return;
 
@@ -401,15 +404,27 @@ class PlayAIBot {
     }
 
     formatTime(ms) {
-        const hours = Math.floor(ms / (1000 * 60 * 60));
-        const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+        const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+        const seconds = (totalSeconds % 60).toString().padStart(2, '0');
         return `${hours}h ${minutes}m ${seconds}s`;
     }
+    
+    async startCountdown(totalMs) {
+        let remaining = totalMs;
+        while (remaining > 0) {
+            const message = `Next run in: ${this.formatTime(remaining)}`;
+            logger.countdown(`[Wallet ${this.index}] ${message} `); // Spasi di akhir untuk mencegah kursor aneh
+            await this.delay(1000);
+            remaining -= 1000;
+        }
+        process.stdout.write('\n'); // Pindah baris setelah countdown selesai
+    }
 
-     async runOnce() {
+    async runOnce() {
         try {
-            logger.step(`[Wallet ${this.index}] Starting bot run for address: ${this.address}`);
+            logger.section(`Wallet ${this.index} | Address: ${this.address}`);
             if (!await this.login()) return false;
             await this.delay(2000);
 
@@ -427,7 +442,7 @@ class PlayAIBot {
 
             await this.performAllChats();
 
-            logger.success(`[Wallet ${this.index}] All tasks for this cycle completed successfully!`);
+            logger.summary(`[Wallet ${this.index}] All tasks for this cycle completed successfully!`);
             return true;
         } catch (error) {
             logger.error(`[Wallet ${this.index}] A critical error occurred in the main bot run: ${error.message}`);
@@ -440,14 +455,24 @@ class PlayAIBot {
             const success = await this.runOnce();
             if (!success) {
                 logger.warn(`[Wallet ${this.index}] Bot run failed, retrying after a short delay...`);
-                await this.delay(60000); // Tunggu 1 menit sebelum mencoba lagi
+                await this.delay(60000); 
                 continue;
             }
 
-            // Tunggu selama 24 jam sebelum proses berikutnya
-            const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
-            logger.info(`[Wallet ${this.index}] Cycle complete. Next run in: ${this.formatTime(twentyFourHoursInMs)}`);
-            await this.delay(twentyFourHoursInMs);
+            logger.section(`[Wallet ${this.index}] Checking Daily Reset`);
+            const quota = await this.getMiningQuota();
+            let timeUntilReset = 24 * 60 * 60 * 1000; 
+
+            if (quota && quota.resetAt) {
+                const resetTime = new Date(quota.resetAt);
+                const now = new Date();
+                const waitTime = resetTime.getTime() - now.getTime();
+                if (waitTime > 0) {
+                    timeUntilReset = waitTime;
+                }
+            }
+            
+            await this.startCountdown(timeUntilReset + 5000); 
         }
     }
 }
@@ -463,7 +488,7 @@ async function main() {
     }
 
     if (privateKeys.length === 0) {
-        logger.critical('No private keys found in .env file!');
+        logger.error('No private keys found in .env file!');
         logger.info('Please add PRIVATE_KEY_1, PRIVATE_KEY_2, etc., to your .env file.');
         return;
     }
@@ -494,7 +519,7 @@ process.on('SIGINT', () => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    logger.critical(`Unhandled Rejection: ${reason}`);
+    logger.error(`Unhandled Rejection: ${reason}`);
 });
 
 main().catch(error => {
