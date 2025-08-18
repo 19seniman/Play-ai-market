@@ -12,36 +12,22 @@ const colors = {
     red: "\x1b[31m",
     white: "\x1b[37m",
     bold: "\x1b[1m",
-    magenta: "\x1b[35m",
-    blue: "\x1b[34m",
-    gray: "\x1b[90m",
 };
 
 const logger = {
     info: (msg) => console.log(`${colors.cyan}[i] ${msg}${colors.reset}`),
-    warn: (msg) => console.log(`${colors.yellow}[!] ${msg}${colors.reset}`),
-    error: (msg) => console.log(`${colors.red}[x] ${msg}${colors.reset}`),
-    success: (msg) => console.log(`${colors.green}[+] ${msg}${colors.reset}`),
-    loading: (msg) => console.log(`${colors.magenta}[*] ${msg}${colors.reset}`),
-    step: (msg) => console.log(`\n${colors.blue}[>] ${colors.bold}${msg}${colors.reset}`),
-    critical: (msg) => console.log(`${colors.red}${colors.bold}[FATAL] ${msg}${colors.reset}`),
-    summary: (msg) => console.log(`${colors.green}${colors.bold}[SUMMARY] ${msg}${colors.reset}`),
+    warn: (msg) => console.log(`${colors.yellow}[⚠] ${msg}${colors.reset}`),
+    error: (msg) => console.log(`${colors.red}[✗] ${msg}${colors.reset}`),
+    success: (msg) => console.log(`${colors.green}[✓] ${msg}${colors.reset}`),
+    loading: (msg) => console.log(`${colors.cyan}[⟳] ${msg}${colors.reset}`),
+    step: (msg) => console.log(`\n${colors.white}${colors.bold}[➤] ${msg}${colors.reset}`),
     banner: () => {
-        const border = `${colors.blue}${colors.bold}╔═════════════════════════════════════════╗${colors.reset}`;
-        const title = `${colors.blue}${colors.bold}║   🍉 19Seniman From Insider    🍉   ║${colors.reset}`;
-        const bottomBorder = `${colors.blue}${colors.bold}╚═════════════════════════════════════════╝${colors.reset}`;
-        
-        console.log(`\n${border}`);
-        console.log(`${title}`);
-        console.log(`${bottomBorder}\n`);
+        console.log(`${colors.cyan}${colors.bold}`);
+        console.log('-----------------------------------------------');
+        console.log('         PlayAI Auto-Vote Bot Script           ');
+        console.log('-----------------------------------------------');
+        console.log(`${colors.reset}`);
     },
-    section: (msg) => {
-        const line = '─'.repeat(40);
-        console.log(`\n${colors.gray}${line}${colors.reset}`);
-        if (msg) console.log(`${colors.white}${colors.bold} ${msg} ${colors.reset}`);
-        console.log(`${colors.gray}${line}${colors.reset}\n`);
-    },
-    countdown: (msg) => process.stdout.write(`\r${colors.blue}[⏰] ${msg}${colors.reset}`),
 };
 
 const getUserAgent = () => {
@@ -158,7 +144,7 @@ class PlayAIBot {
         }
     }
 
-   async checkIn() {
+    async checkIn() {
         try {
             logger.info(`[Wallet ${this.index}] Performing daily check-in...`);
             const response = await this.axios.post(`${this.baseURL}/user/streak`);
@@ -200,7 +186,7 @@ class PlayAIBot {
         }
     }
 
-   async completeAllMissions() {
+    async completeAllMissions() {
         logger.step(`[Wallet ${this.index}] Starting mission completion...`);
         const missions = await this.getMissions();
         const incompleteMissions = missions.filter(mission => !mission.completed);
@@ -407,7 +393,7 @@ class PlayAIBot {
         return `${hours}h ${minutes}m ${seconds}s`;
     }
 
-     async runOnce() {
+    async runOnce() {
         try {
             logger.step(`[Wallet ${this.index}] Starting bot run for address: ${this.address}`);
             if (!await this.login()) return false;
@@ -440,14 +426,25 @@ class PlayAIBot {
             const success = await this.runOnce();
             if (!success) {
                 logger.warn(`[Wallet ${this.index}] Bot run failed, retrying after a short delay...`);
-                await this.delay(60000); // Tunggu 1 menit sebelum mencoba lagi
+                await this.delay(60000); 
                 continue;
             }
 
-            // Tunggu selama 24 jam sebelum proses berikutnya
-            const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
-            logger.info(`[Wallet ${this.index}] Cycle complete. Next run in: ${this.formatTime(twentyFourHoursInMs)}`);
-            await this.delay(twentyFourHoursInMs);
+            logger.step(`[Wallet ${this.index}] Checking daily reset time...`);
+            const quota = await this.getMiningQuota();
+            let timeUntilReset = 24 * 60 * 60 * 1000; 
+
+            if (quota && quota.resetAt) {
+                const resetTime = new Date(quota.resetAt);
+                const now = new Date();
+                const waitTime = resetTime.getTime() - now.getTime();
+                if (waitTime > 0) {
+                    timeUntilReset = waitTime;
+                }
+            }
+            
+            logger.info(`[Wallet ${this.index}] Next run in: ${this.formatTime(timeUntilReset)}`);
+            await this.delay(timeUntilReset + 5000); 
         }
     }
 }
@@ -463,7 +460,7 @@ async function main() {
     }
 
     if (privateKeys.length === 0) {
-        logger.critical('No private keys found in .env file!');
+        logger.error('No private keys found in .env file!');
         logger.info('Please add PRIVATE_KEY_1, PRIVATE_KEY_2, etc., to your .env file.');
         return;
     }
@@ -494,10 +491,10 @@ process.on('SIGINT', () => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    logger.critical(`Unhandled Rejection: ${reason}`);
+    logger.error(`Unhandled Rejection: ${reason}`);
 });
 
 main().catch(error => {
-    logger.critical(`A fatal error occurred: ${error.message}`);
+    logger.error(`A fatal error occurred: ${error.message}`);
     process.exit(1);
 });
