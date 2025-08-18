@@ -4,7 +4,6 @@ const { ethers } = require('ethers');
 const fs = require('fs');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 
-// Menambahkan warna baru yang dibutuhkan oleh logger
 const colors = {
     reset: "\x1b[0m",
     cyan: "\x1b[36m",
@@ -18,7 +17,6 @@ const colors = {
     gray: "\x1b[90m",
 };
 
-// Logger baru yang Anda berikan
 const logger = {
     info: (msg) => console.log(`${colors.cyan}[i] ${msg}${colors.reset}`),
     warn: (msg) => console.log(`${colors.yellow}[!] ${msg}${colors.reset}`),
